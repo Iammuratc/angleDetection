@@ -1,4 +1,7 @@
-function [lowx,highx,lowy,highy]=getBoundingBox(folder_name,v_folder,list,numberOfImages)
+function [lowx,highx,lowy,highy]=getBoundingBox(folder_name,list)
+
+% Define number of images to be processed to calculate the bounding box
+numberOfImages = size(list,1);
 lowxs=zeros(numberOfImages,1);
 highxs=zeros(numberOfImages,1);
 lowys=zeros(numberOfImages,1);
@@ -6,12 +9,12 @@ highys=zeros(numberOfImages,1);
     for i=1:numberOfImages
         image_number = randi([1,numel(list)]);
     image_file = sprintf('Momentaufnahme - %02d.png',image_number);
-    rgb = imread(fullfile('images',folder_name,v_folder,image_file));
+    rgb = imread(fullfile(folder_name,image_file));
 
     im = rgb2gray(rgb); % For display
     im=double(im);
     im=im/max(im(:));
-
+% Cut some of the image
 [b,a]=size(im);
 col1=floor(0.15*a);
 col2=floor(0.75*a);
@@ -22,6 +25,7 @@ im(:,[1:col1,col2:end])=[];
 
 im([1:row1,row2:end],:)=[];
 
+% Gradient image
 im_smooth=imgaussfilt(im,10);
 hy = fspecial('sobel');
 hx = hy';

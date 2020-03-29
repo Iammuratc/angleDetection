@@ -34,6 +34,8 @@ if abs((Axes(1)-Axes(2))/Axes(1))<tolerance
     return;
 end
 %  Now dealing with proper ellipses
+% a = max(Axes(1),Axes(2));
+% b = min(Axes(1),Axes(2));
 a = Axes(1); b = Axes(2);
 aa = a^2;  bb = b^2;
 tol_a = tolerance*a;
@@ -101,12 +103,37 @@ end % end the main loop
 XYproj = XYproj*Q';
 XYproj = [XYproj(:,1)+Center(1) XYproj(:,2)+Center(2)];
 RSS=sqrt(sum((XY-XYproj).^2,2));
-%RSS=max(RSS);
-%weights=XY(:,2);
-%weights=1./(weights.^2+1);
-%weights=weights/sum(weights);
-%RSS=RSS.*weights;
+% disp(sum(RSS(:)))
 RSS=sum(RSS.^2);
+
+% if(isnan(RSS) | RSS==Inf | abs(imag(RSS))>0)
+%     RSS=10^5;
+% end
+
+
+% RSS=max(RSS);
+
+% weights=linspace(1,0,size(RSS,1));
+% size(weights)
+% RSS=weights*RSS;
+
+
+% RSS=max(RSS);
+% RSS=sum(RSS.^2);
+
+% RSS=sqrt(sum((XY-XYproj).^2,2));
+% RSS=max(RSS);
+
+% weights=XY(:,2);
+% disp('weights')
+% disp(size(weights))
+% disp('RSS')
+% disp(size(RSS))
+% weights=1./(weights.^2+1);
+% weights=weights/max(weights(:));
+% RSS=weights.'*RSS;
+% RSS=RSS.*weights;
+% RSS=sum(RSS.^2);
 %sum(RSS.^2)
-%RSS = norm(XY-XYproj,'fro')^2;
+% RSS = norm(XY-XYproj,'fro')^2;
 end   % Residuals_ellipse

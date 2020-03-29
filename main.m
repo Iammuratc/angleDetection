@@ -2,70 +2,58 @@ clear all
 close all
 
 %% Define the working folder
+folder_name = 'data';
 
-folder_name = 'Sphärischer Graphit (Sorte SG)';
-v_folder = 'KWSG_V011_MA_2005';
+%% All dataset array
+list=dir(folder_name);
+list(1:2)=[];
 
-list=dir(fullfile('images',folder_name,v_folder));
-list(1:3)=[];
-
+%% Results (left, right, intersect distance, droplet height)
+results=zeros(numel(list),4);
 %% Detect bounding box
-numberOfImages = 5;
-[lowx,highx,lowy,highy]=getBoundingBox(folder_name,v_folder,list,numberOfImages);
-% Display
-image_file = sprintf('Momentaufnahme - %02d.png',2);
-rgb = imread(fullfile('images',folder_name,v_folder,image_file));
-I = rgb2gray(rgb); 
-I = I(lowy:highy,lowx:highx);
-figure, imshow(I)
-%% Detect the average line
-numberOfImages = 10;
-results = zeros(numel(list),4);
+[lowx,highx,lowy,highy]=getBoundingBox(folder_name,list);
+% Display bounding box
+image_file = sprintf('Momentaufnahme - %02d.png',5);
+rgb = imread(fullfile(folder_name,image_file));
+I0 = rgb2gray(rgb);
 
-p_lefts = zeros(numberOfImages,2);
-p_rights = zeros(numberOfImages,2);
-mi_list = zeros(numberOfImages,1);
-mid_list = zeros(numberOfImages,1);
-ma_list = zeros(numberOfImages,1);
-droplet_boundaries = zeros(numberOfImages,3);
-for i = 1:numberOfImages
-    image_number = randi([1,numel(list)]);
-    [p_left,p_right,min_col,mid,max_col,max_row] = getSurface(folder_name,v_folder,image_number,lowy,highy,lowx,highx); 
-    droplet_boundaries(i,:) = [min_col,max_col,max_row];
-    p_lefts(i,:) = p_left;
-    p_rights(i,:) = p_right;
-    mi_list(i) = min_col;
-    mid_list(i) = mid;
-    ma_list(i) = max_col;
-end
-p_lefts = rmoutliers(p_lefts);
-p_rights = rmoutliers(p_rights);
-p_left = mean(p_lefts);
-p_right = mean(p_rights);
-% p_average_left = (p_average_left + p_average_right)/2; % Get average for left and right lines (delete if you dont want)
-% p_average_right = p_average_left; % Get average for left and right lines (delete if you dont want)
-
-min_col = mean(mi_list);
-mid = mean(mid_list);
-max_col = mean(ma_list);
-droplet_boundary = round(mean(rmoutliers(droplet_boundaries)));
-%% Plot surface line
+I = I0(lowy:highy,lowx:highx);
+figure
+title('Cutout image')
+imshow(I)
+%% Droplet boundary
+[droplet_boundary] = getDropletBoundaries(folder_name,list,lowy,highy,lowx,highx);
+%% Surface line
+close all
+[p_bar] = getSurface(folder_name,list,lowy,highy,lowx,highx,droplet_boundary);
+% Display surface line
 figure
 imshow(I,[])
 hold on
-plot(min_col:mid,p_left(2)+[min_col:mid]*p_left(1))
-plot(mid:max_col,p_right(2)+[mid:max_col]*p_right(1))
-surfaceRow = round(max([p_left(2)+1*p_left(1) ...
-    p_right(2)+(highx-lowx)*p_right(1)]))+5;
-%% Droplet detection
+plot(1:size(I,2),p_bar(2)+(1:size(I,2))*p_bar(1))
+%% Surface Row
+% This is for removing the depth of bar appearaing in the images. So the
+% watershed algorithm works fine.
+extra_row=10;
+surfaceRow=round(max([p_bar(2)+1*p_bar(1) p_bar(2)+(highx-lowx)*p_bar(1)]))+extra_row;
+%% Watershed transformation and fit 'very first ellipses'
+% % If the result is bad, it is most likely because of the marker image.
+close all
+numberOfImages=size(list,1);
+[ws_volume,Icutout_volume,droplet_volume,ellipse_data] = ... 
+getWatershedVolume(folder_name,numberOfImages,surfaceRow,lowy,highy,lowx,highx,droplet_boundary,p_bar);
+%% Get the initial ellipse as median of 'very first ellipses' for further fitting
+initial_ellipse=median(ellipse_data);
+ellipse_data_temp=zeros(size(list,1),5);
 close all
 
-for image_number =1:numel(list)
-    disp(image_number)
-    [droplet,Icutout] = getDroplet(folder_name,v_folder,image_number,surfaceRow,lowy,highy,lowx,highx,droplet_boundary,p_left);
-    [theta_left,theta_right,dist_droplet,dist_intersect]=getThetas(droplet,Icutout,p_left,p_right,surfaceRow);
-    results(image_number,1)=theta_left;
-    results(image_number,2)=theta_right;
-    results(image_number,3)=dist_intersect;
-    results(image_number,4)=dist_droplet;
+%% Fit an ellipse again using the very first ellipse as the initial point 
+% and calculate results (theta left, theta left, intersect distance, droplet height)
+for i=1:size(list,1)
+image_number=i;
+[theta_left,theta_right,dist_droplet,dist_intersect] = getEllipse(Icutout_volume,droplet_volume,image_number,surfaceRow,p_bar,ellipse_data,initial_ellipse);
+results(image_number,1)=theta_left;
+results(image_number,2)=theta_right;
+results(image_number,3)=dist_intersect;
+results(image_number,4)=dist_droplet;
 end

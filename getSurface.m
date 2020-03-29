@@ -1,45 +1,47 @@
-function [p_left,p_right,min_col,mid,max_col,max_row] = getSurface(folder_name,v_folder,image_number,row0,row1,col0,col1)
+function [p_surface] = getSurface(folder_name,list,lowy,highy,lowx,highx,droplet_boundary)
 
+max_col=droplet_boundary(2);
+min_col = droplet_boundary(1);
+
+% Define number of images to be processed to calculate the surface line
+numberOfImages=4;
+Isum=uint16(zeros(71,max_col+151));
+
+for i =1:numberOfImages
+image_number = randi([1,numel(list)]);
 image_file = sprintf('Momentaufnahme - %02d.png',image_number);
-rgb = imread(fullfile('images',folder_name,v_folder,image_file));
-Iextended = rgb2gray(rgb); % For display
-Icutout = Iextended(row0:row1,col0:col1); % Working image
+rgb = imread(fullfile(folder_name,image_file));
+I = rgb2gray(rgb);
+I = I(lowy:lowy+70,lowx-150:lowx+max_col);
 
-%net = denoisingNetwork('DnCNN');
+%% Contrast enhancement
+I = adapthisteq(I);
+I = imnlmfilt(I,'SearchWindowSize',41,'ComparisonWindowSize',11,'DegreeOfSmoothing',10);%,[15 15]);%(Ioriginal, net);
 
-Icutout = adapthisteq(Icutout);
-Icutout = imnlmfilt(Icutout,'SearchWindowSize',41,'ComparisonWindowSize',11,'DegreeOfSmoothing',10);%,[15 15]);%(Ioriginal, net);
-I = Icutout;
-[a,b]=size(I);
 
-%% Droplet boundaries
-Iedge = edge(I);
-% figure,imshow(Iedge);
-
-[row,col] = find(Iedge);
-max_row = max(row);
-Iedgetmp = Iedge(round(a*0.4):round(a*0.6),:);
-[row,col] = find(Iedgetmp);
-min_col=min(col);
-max_col=max(col);
-mid=round((min_col+max_col)/2);
-%% Surface
-Itemp=imbinarize(I);
-% figure,imshow(Itemp)
-Ileft=I(:,1:min_col-10);
-Iright=I(:,max_col+10:end);
-Ileft=imbinarize(Ileft);
-Iright=imbinarize(Iright);
-Ileft=~Ileft;
-Iright=~Iright;
-Iright=imdilate(Iright,strel('disk',1))-Iright;
-Ileft=imdilate(Ileft,strel('disk',1))-Ileft;
-% figure,imshow(Ileft)
-% figure,imshow(Iright)
-[row_l,col_l] = find(Ileft);
-[row_r,col_r] = find(Iright);
-% 
-p_left = polyfit(col_l,row_l,1);
-p_right = polyfit(col_r,row_r,1);
+%% Add up all images
+Isum(:,:)=Isum+uint16(I);
+figure,imshow(edge(I))
 end
+Isum = imadjust(Isum,stretchlim(Isum),[]);
 
+
+%% Get the edge image
+Iedge = edge(Isum,'Prewitt');
+%% Hough transform
+[H,T,R] = hough(Iedge,'Theta',-90:0.01:-89);
+
+P  = houghpeaks(H,1);
+
+x=linspace(1,size(I,2),1000);
+my_rho=R(P(:,1));
+my_theta=deg2rad(T(P(:,2)));
+y=(my_rho-x*cos(my_theta))/sin(my_theta);
+
+% figure
+% imshow(Iedge)
+% hold on
+% plot(x,y,'r')
+
+p_surface = [cos(my_theta)/sin(my_theta), my_rho/sin(my_theta)];
+end
