@@ -4,11 +4,11 @@
 
 Wetting properties of surfaces and their measurement are essential in many industries. For example, the contact angle can be used to quantify the wetting of a substrate by a liquid, see the calculation of contact angle in Figure below.
 
-<img src="figures/contact_angle.png" width="300">
+<img src="figures/contact_angle.png" width="200">
 
 In this project, I want to detect the droplet and the surface where the droplet stands, and to calculate the contact angle between them, see an image below.
 
-<img src="figures/experimental_setups/setup_5.png" width="300">
+<img src="figures/experimental_setups/setup_5.png" width="500">
 
 ## Dataset
 You can find a small dataset (10 images) in the folder `data` and the corresponding results in the folder `results`.
@@ -22,7 +22,6 @@ I divide the project into four tasks: Localization of the droplet-surface contac
 
 Before I explain the tasks individually, I want to mention a few things about the dataset and the algorithm. The images are not focused on the contact because the experimental setup did not allow to do it so. Also, the lighting in the setup varies from one to another, check the folder `figures/experimental_setups`. These things are some challenges with the task. Regarding the algorithm, since I have a time-series dataset, I take advantage of the whole dataset to locate the contact, and to detect the surface line and the droplet boundary. Here is a brief description for each task in the algorithm:
 
-
 ### Localization of the droplet-surface contact
 I make up some heuristic rules by using the number of white pixels in rows and columns to locate the contact.
 ### Detection of the surface line
@@ -34,4 +33,4 @@ After extracting the boundaries of the droplet in the previous step, I fit an el
 
 Here is the result from my algorithm.
 
-<img src="results/006.png" width="300">
+<img src="results/006.png" width="500">
